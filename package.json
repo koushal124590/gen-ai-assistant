@@ -1,0 +1,21 @@
+{
+  "name": "gen-ai-assistant",
+  "version": "1.0.0",
+  "description": "GEN — Personal AI Assistant with 50+ features",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.0",
+    "google-it": "^1.6.4",
+    "node-edge-tts": "^1.2.10",
+    "nodemailer": "^6.9.0",
+    "open": "^10.1.0",
+    "qrcode": "^1.5.4",
+    "screenshot-desktop": "^1.15.3",
+    "wikipedia": "^2.1.2"
+  }
+}

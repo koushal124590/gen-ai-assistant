@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>World Monitor - OSINT Dashboard</title>
+    <script src="https://unpkg.com/three@0.147.0/build/three.min.js"></script>
+    <script src="https://unpkg.com/three-globe@2.24.12/dist/three-globe.min.js"></script>
+    <style>
+        /* CORE OSINT ARCHITECTURE */
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@300;500;700&display=swap');
+        
+        :root {
+            --bg-base: #0a0a0a;
+            --bg-panel: #141414;
+            --border: #2a2a2a;
+            --header: #1a1a1a;
+            --text-primary: #e5e5e5;
+            --text-muted: #888;
+            --accent: #16a34a; /* WorldMonitor green dot */
+            --danger: #ef4444;
+            --brand: #fff;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+
+        body { 
+            background: var(--bg-base); 
+            color: var(--text-primary); 
+            font-family: 'Inter', sans-serif; 
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* HEADER NAV */
+        .wm-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 48px;
+            padding: 0 20px;
+            background: var(--header);
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+            z-index: 100;
+        }
+        .wm-logo { font-size: 14px; font-weight: 700; color: var(--brand); letter-spacing: 1px; display: flex; align-items: center; gap: 10px; }
+        .wm-logo::before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 10px var(--accent); }
+        .wm-pills { display: flex; gap: 10px; align-items: center; }
+        .wm-pill { background: #1e1e1e; padding: 5px 12px; border-radius: 6px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-muted); border: 1px solid var(--border); }
+        
+        /* MAIN DASHBOARD SHELL */
+        .wm-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* TACTICAL MAP CONTAINER (Top Half) */
+        .wm-map {
+            height: 55vh;
+            min-height: 250px;
+            background: #020a08;
+            border-bottom: 1px solid var(--border);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+        .wm-map-bar {
+            height: 36px;
+            display: flex;
+            align-items: center;
+            padding: 0 15px;
+            background: rgba(20, 20, 20, 0.8);
+            backdrop-filter: blur(5px);
+            border-bottom: 1px solid var(--border);
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            z-index: 10;
+        }
+        .map-badge { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-muted); margin-right: 15px; }
+        .map-badge span { color: var(--text-primary); font-weight: bold; }
+        
+        #globe-container { flex: 1; position: relative; background: radial-gradient(ellipse 60% 50% at 50% 50%, #0a2a20 0%, #020a08 100%); overflow: hidden; }
+
+        /* INTELLIGENCE GRID (Bottom Half) */
+        .wm-grid-scroll {
+            flex: 1;
+            overflow-y: auto;
+            background: var(--bg-base);
+            padding: 12px;
+        }
+        .wm-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 12px;
+            align-content: start;
+        }
+
+        /* INTELLIGENCE PANELS */
+        .wm-panel {
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            height: 320px;
+            overflow: hidden;
+            transition: border-color 0.2s;
+        }
+        .wm-panel:hover { border-color: #444; }
+        .wm-panel-header {
+            height: 40px;
+            display: flex;
+            align-items: center;
+            padding: 0 15px;
+            border-bottom: 1px solid var(--border);
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            color: var(--text-primary);
+            background: #1a1a1a;
+            gap: 8px;
+        }
+        .wm-panel-header .icon { color: var(--text-muted); }
+        .wm-panel-body {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        /* DATA UI ELEMENTS */
+        .data-row { display: flex; justify-content: space-between; padding-bottom: 10px; border-bottom: 1px dashed var(--border); margin-bottom: 5px; }
+        .data-label { color: var(--text-muted); }
+        .data-val { color: var(--brand); font-weight: bold; }
+        .data-val.up { color: var(--accent); }
+        .data-val.down { color: var(--danger); }
+        
+        .news-item { margin-bottom: 12px; line-height: 1.4; display: flex; gap: 10px; }
+        .news-time { color: var(--text-muted); font-size: 10px; flex-shrink: 0; }
+        .news-title { color: var(--text-primary); font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 500; }
+        .news-title:hover { color: var(--accent); cursor: pointer; }
+
+    </style>
+</head>
+<body>
+
+    <!-- TOP HEADER -->
+    <header class="wm-header">
+        <div class="wm-logo">WORLD MONITOR</div>
+        <div class="wm-pills">
+            <div class="wm-pill" id="global-clock">00:00:00 UTC</div>
+            <div class="wm-pill">LATENCY <span style="color:var(--accent);">10ms</span></div>
+            <div class="wm-pill" id="defcon">THREAT: NOMINAL</div>
+        </div>
+    </header>
+
+    <div class="wm-main">
+        <!-- TOP HALF: TACTICAL MAP -->
+        <section class="wm-map">
+            <div class="wm-map-bar">
+                <div class="map-badge">LAYER: <span>SATELLITE DOWNLINK</span></div>
+                <div class="map-badge">NODES: <span id="node-count">3,204 Active</span></div>
+                <div class="map-badge" style="margin-left: auto; color: var(--danger);">ISSR TRACK: LIVE</div>
+            </div>
+            <div id="globe-container"></div>
+        </section>
+
+        <!-- BOTTOM HALF: DATA GRID -->
+        <section class="wm-grid-scroll">
+            <div class="wm-grid">
+                
+                <!-- NEWS PANEL -->
+                <div class="wm-panel">
+                    <div class="wm-panel-header"><span class="icon">📰</span> GLOBAL INTELLIGENCE</div>
+                    <div class="wm-panel-body" id="news-feed">
+                        <div style="color:var(--text-muted);">Establishing secure link...</div>
+                    </div>
+                </div>
+
+                <!-- MARKETS PANEL -->
+                <div class="wm-panel">
+                    <div class="wm-panel-header"><span class="icon">📈</span> MACRO MARKETS</div>
+                    <div class="wm-panel-body" id="markets-feed">
+                        <div class="data-row"><span class="data-label">BITCOIN (BTC)</span><span class="data-val up" id="m-btc">Loading...</span></div>
+                        <div class="data-row"><span class="data-label">ETHEREUM (ETH)</span><span class="data-val up" id="m-eth">Loading...</span></div>
+                        <div class="data-row"><span class="data-label">SOLANA (SOL)</span><span class="data-val up" id="m-sol">Loading...</span></div>
+                        <div class="data-row"><span class="data-label">GOLD (XAU)</span><span class="data-val" id="m-xau">Loading...</span></div>
+                        <div class="data-row" style="border:none;"><span class="data-label">S&P 500</span><span class="data-val" id="m-spy">Loading...</span></div>
+                    </div>
+                </div>
+
+                <!-- EARTHQUAKE PANEL -->
+                <div class="wm-panel">
+                    <div class="wm-panel-header"><span class="icon">🌋</span> SEISMIC ACTIVITY (USGS)</div>
+                    <div class="wm-panel-body" id="quake-feed">
+                        <div style="color:var(--text-muted);">Scanning fault lines...</div>
+                    </div>
+                </div>
+
+                <!-- SYSTEM TELEMETRY -->
+                <div class="wm-panel">
+                    <div class="wm-panel-header"><span class="icon">⚙️</span> LOCAL NODE TELEMETRY</div>
+                    <div class="wm-panel-body">
+                        <div class="data-row"><span class="data-label">CPU ARCH</span><span class="data-val" id="sys-cpu">SCANNING...</span></div>
+                        <div class="data-row"><span class="data-label">BASE CLOCK</span><span class="data-val" id="sys-core">-- CORES</span></div>
+                        <div class="data-row"><span class="data-label">RAM UTILIZATION</span><span class="data-val" id="sys-ram">--%</span></div>
+                        <div class="data-row"><span class="data-label">FREE MEMORY</span><span class="data-val up" id="sys-ram-free">--GB</span></div>
+                        <div class="data-row" style="border:none;"><span class="data-label">UPTIME</span><span class="data-val" id="sys-uptime">00:00:00</span></div>
+                    </div>
+                </div>
+
+                <!-- CYBER THREATS -->
+                <div class="wm-panel">
+                    <div class="wm-panel-header"><span class="icon">🛡️</span> NETWORK INTRUSION LOG</div>
+                    <div class="wm-panel-body" style="background:#050505; color:#16a34a; padding:10px; font-size:11px;" id="term-logs">
+                    </div>
+                </div>
+
+            </div>
+        </section>
+    </div>
+
+    <script>
+        // --- CLOCKS ---
+        function updateClocks() {
+            const now = new Date();
+            document.getElementById('global-clock').textContent = now.toISOString().substring(11,19) + ' UTC';
+        }
+        setInterval(updateClocks, 1000);
+
+        // --- 3D GLOBE ---
+        let Globe;
+        async function initGlobe() {
+            const container = document.getElementById('globe-container');
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(45, container.clientWidth/container.clientHeight, 1, 4000);
+            camera.position.z = 350;
+
+            const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            container.appendChild(renderer.domElement);
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+            scene.add(ambientLight);
+            const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
+            dirLight.position.set(100, 100, 200);
+            scene.add(dirLight);
+
+            Globe = new ThreeGlobe()
+                .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-night.jpg')
+                .bumpImageUrl('https://unpkg.com/three-globe/example/img/earth-topology.png')
+                .atmosphereColor('#16a34a')
+                .atmosphereAltitude(0.12)
+                .showAtmosphere(true)
+                .arcsData([{ startLat: 39.9, startLng: 116.4, endLat: 51.5, endLng: -0.1, color:'#16a34a' }])
+                .arcColor('color').arcDashLength(0.4).arcDashGap(4).arcDashAnimateTime(2000);
+
+            scene.add(Globe);
+
+            window.addEventListener('resize', () => {
+                camera.aspect = container.clientWidth / container.clientHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(container.clientWidth, container.clientHeight);
+            });
+
+            function animate() {
+                requestAnimationFrame(animate);
+                Globe.rotation.y += 0.0005;
+                renderer.render(scene, camera);
+            }
+            animate();
+            fetchISSLocation();
+        }
+
+        async function fetchISSLocation() {
+            try {
+                const res = await fetch('http://api.open-notify.org/iss-now.json');
+                const data = await res.json();
+                const lat = parseFloat(data.iss_position.latitude);
+                const lng = parseFloat(data.iss_position.longitude);
+                Globe.ringsData([{ lat, lng, maxR: 8, color: '#ef4444' }])
+                     .ringColor('color').ringMaxRadius('maxR').ringPropagationSpeed(2).ringRepeatPeriod(1000);
+            } catch(e) {}
+            setTimeout(fetchISSLocation, 5000);
+        }
+        initGlobe();
+
+        // --- FETCH OSINT DATA ---
+        async function fetchLiveNews() {
+            try {
+                const res = await fetch('http://localhost:7777/api/news');
+                const data = await res.json();
+                const nf = document.getElementById('news-feed');
+                if (data.news) {
+                    nf.innerHTML = '';
+                    data.news.slice(0, 6).forEach(n => {
+                        const t = new Date(n.pubDate).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                        nf.innerHTML += `<div class="news-item"><span class="news-time">${t}</span><span class="news-title" onclick="window.open('${n.link}')">${n.title.substring(0,80)}...</span></div>`;
+                    });
+                }
+            } catch(e) {}
+            setTimeout(fetchLiveNews, 60000);
+        }
+
+        async function fetchMarkets() {
+            try {
+                // Crypto from Binance
+                const btRes = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT');
+                document.getElementById('m-btc').textContent = '$' + parseFloat((await btRes.json()).price).toLocaleString(undefined,{maximumFractionDigits:0});
+                
+                const etRes = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=ETHUSDT');
+                document.getElementById('m-eth').textContent = '$' + parseFloat((await etRes.json()).price).toLocaleString(undefined,{maximumFractionDigits:2});
+                
+                const solRes = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=SOLUSDT');
+                document.getElementById('m-sol').textContent = '$' + parseFloat((await solRes.json()).price).toLocaleString(undefined,{maximumFractionDigits:2});
+
+                // Traditional from Yahoo Finance (CORS bypass via public chart API)
+                const spyRes = await fetch('https://query1.finance.yahoo.com/v8/finance/chart/SPY?interval=1d');
+                const spyData = await spyRes.json();
+                document.getElementById('m-spy').textContent = spyData.chart.result[0].meta.regularMarketPrice.toLocaleString(undefined,{maximumFractionDigits:2});
+
+                const xauRes = await fetch('https://query1.finance.yahoo.com/v8/finance/chart/GC=F?interval=1d');
+                const xauData = await xauRes.json();
+                document.getElementById('m-xau').textContent = '$' + xauData.chart.result[0].meta.regularMarketPrice.toLocaleString(undefined,{maximumFractionDigits:2});
+            } catch(e) {}
+            setTimeout(fetchMarkets, 15000); // 15 seconds refresh for markets
+        }
+
+        async function fetchQuakes() {
+            try {
+                const res = await fetch('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_hour.geojson');
+                const data = await res.json();
+                const qf = document.getElementById('quake-feed');
+                qf.innerHTML = '';
+                if(data.features.length === 0) qf.innerHTML = '<div style="color:var(--text-muted);">No recent seismic activity.</div>';
+                data.features.slice(0, 6).forEach(f => {
+                    const mag = f.properties.mag;
+                    const place = f.properties.place;
+                    const color = mag > 3 ? 'var(--danger)' : 'var(--accent)';
+                    qf.innerHTML += `<div class="data-row" style="margin-bottom:8px/"><span class="data-label">${place}</span><span class="data-val" style="color:${color}">M ${mag.toFixed(1)}</span></div>`;
+                });
+            } catch(e) {}
+            setTimeout(fetchQuakes, 60000);
+        }
+
+        async function fetchSystemStats() {
+            try {
+                const res = await fetch('http://localhost:7777/api/system');
+                const data = await res.json();
+                document.getElementById('sys-cpu').textContent = data.cpuModel.substring(0, 18) + '...';
+                document.getElementById('sys-core').textContent = data.cpuCores + ' CORES';
+                document.getElementById('sys-ram').textContent = data.memoryUsage;
+                document.getElementById('sys-ram-free').textContent = data.freeMemory;
+                document.getElementById('sys-uptime').textContent = data.uptime;
+            } catch(e) {}
+            setTimeout(fetchSystemStats, 3000);
+        }
+
+        let threatIndex = 0;
+        let activeThreats = [];
+        const terminalLogs = document.getElementById('term-logs');
+
+        async function fetchCyberThreats() {
+            try {
+                const res = await fetch('http://localhost:7777/api/cyber');
+                const data = await res.json();
+                if (data.threats && data.threats.length > 0) activeThreats = data.threats;
+            } catch(e) {}
+            setTimeout(fetchCyberThreats, 120000); // Update threat list every 2 mins
+        }
+        
+        setInterval(() => {
+            if (activeThreats.length > 0) {
+                const threat = activeThreats[threatIndex % activeThreats.length];
+                terminalLogs.innerHTML += `<div><span style="color:var(--text-muted)">[${new Date().toLocaleTimeString()}]</span> DETECTED [${threat.threat.toUpperCase()}]: ${threat.url}... <span style="color:var(--danger)">[BLOCKING]</span></div>`;
+                threatIndex++;
+                if(terminalLogs.children.length > 12) terminalLogs.removeChild(terminalLogs.firstChild);
+                terminalLogs.scrollTop = terminalLogs.scrollHeight;
+            } else {
+                terminalLogs.innerHTML += `<div><span style="color:var(--text-muted)">[${new Date().toLocaleTimeString()}]</span> SCANNING NETWORK... SECURE.</div>`;
+            }
+        }, 3000);
+
+        fetchLiveNews();
+        fetchMarkets();
+        fetchQuakes();
+        fetchSystemStats();
+        fetchCyberThreats();
+
+
+    </script>
+</body>
+</html>

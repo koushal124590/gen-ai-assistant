@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GEN — Personal AI Assistant</title>
+    <meta name="description"
+        content="GEN is your personal AI assistant — local-first, cloud when needed. Voice, system control, and multi-mode intelligence on your device.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <canvas id="particleCanvas"></canvas>
+    <div class="scanline-overlay"></div>
+
+    <!-- Model Download Overlay -->
+    <div class="download-overlay" id="downloadOverlay">
+        <div class="download-card">
+            <div class="download-icon">◆</div>
+            <h2>GEN AI — First Time Setup</h2>
+            <p class="download-desc">Downloading AI model for offline use.<br>This only happens once (~2 GB).</p>
+            <div class="download-progress-wrap">
+                <div class="download-progress-bar" id="downloadProgressBar"></div>
+            </div>
+            <p class="download-status" id="downloadStatus">Initializing WebGPU engine...</p>
+            <p class="download-tip">After download, GEN works <strong>fully offline</strong>.</p>
+            <button class="download-skip" id="downloadSkipBtn"
+                onclick="document.getElementById('downloadOverlay').classList.remove('active')">Skip — Use GEN
+                Now</button>
+        </div>
+    </div>
+
+    <!-- Top Bar -->
+    <header id="topBar">
+        <div class="top-left">
+            <div class="logo-mark">
+                <span class="logo-icon">◆</span>
+                <span class="logo-text">GEN</span>
+            </div>
+            <div class="status-pill" id="statusPill">
+                <span class="status-dot"></span>
+                <span class="status-label" id="statusLabel">Initializing</span>
+            </div>
+            <div class="connectivity-pill" id="connectivityPill">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M1 1l22 22" />
+                    <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55" />
+                    <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39" />
+                    <path d="M10.71 5.05A16 16 0 0 1 22.56 9" />
+                    <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88" />
+                    <path d="M8.53 16.11a6 6 0 0 1 6.95 0" />
+                    <line x1="12" y1="20" x2="12.01" y2="20" />
+                </svg>
+                <span id="connectivityLabel">Offline</span>
+            </div>
+        </div>
+        <nav class="mode-tabs" id="modeTabs">
+            <button class="mode-tab active" data-mode="chat">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
+                Chat
+            </button>
+            <button class="mode-tab" data-mode="research">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8" />
+                    <path d="m21 21-4.3-4.3" />
+                </svg>
+                Research
+            </button>
+            <button class="mode-tab" data-mode="code">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="16 18 22 12 16 6" />
+                    <polyline points="8 6 2 12 8 18" />
+                </svg>
+                Code
+            </button>
+            <button class="mode-tab" data-mode="creative">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon
+                        points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                </svg>
+                Creative
+            </button>
+            <button class="mode-tab" data-mode="system">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="2" y="3" width="20" height="14" rx="2" />
+                    <line x1="8" y1="21" x2="16" y2="21" />
+                    <line x1="12" y1="17" x2="12" y2="21" />
+                </svg>
+                System
+            </button>
+        </nav>
+        <div class="top-right">
+            <button class="icon-btn" id="settingsBtn" title="Settings">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="3" />
+                    <path
+                        d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                </svg>
+            </button>
+            <button class="icon-btn" id="newChatBtn" title="New Chat">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main id="mainContent">
+        <!-- Center Orb Section -->
+        <section class="orb-section" id="orbSection">
+            <div class="orb-container" id="orbContainer">
+                <canvas id="orbCanvas"></canvas>
+                <div class="orb-label" id="orbLabel">Ready</div>
+            </div>
+        </section>
+
+        <!-- Chat Panel -->
+        <section class="chat-panel" id="chatPanel">
+            <div class="chat-messages" id="chatMessages"></div>
+        </section>
+    </main>
+
+    <!-- Bottom Input Bar -->
+    <footer id="inputBar">
+        <div class="input-container">
+            <div class="input-wrapper">
+                <textarea id="textInput" placeholder="Type or say 'Hey GEN'..." rows="1"></textarea>
+                <button class="send-btn" id="sendBtn" title="Send message" disabled>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="22" y1="2" x2="11" y2="13" />
+                        <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                    </svg>
+                </button>
+            </div>
+            <div class="input-meta">
+                <span class="model-badge" id="modelBadge">GEN • Initializing...</span>
+                <span class="char-count" id="charCount"></span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Floating Mic Button (Walking Assistant Mode) -->
+    <button class="floating-mic" id="floatingMic" title="Tap to talk — GEN is listening">
+        <div class="mic-pulse-ring"></div>
+        <div class="mic-pulse-ring mic-pulse-ring-2"></div>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+            <line x1="12" y1="19" x2="12" y2="23" />
+            <line x1="8" y1="23" x2="16" y2="23" />
+        </svg>
+        <span class="mic-label" id="micLabel">Tap to talk</span>
+    </button>
+
+    <!-- Hands-Free Badge -->
+    <div class="handsfree-badge" id="handsfreeBadge">
+        <div class="hf-dot"></div>
+        <span>Hands-Free ON</span>
+        <button class="hf-stop" id="hfStopBtn" title="Stop hands-free">✕</button>
+    </div>
+
+    <!-- Voice Overlay -->
+    <div class="voice-overlay" id="voiceOverlay">
+        <div class="voice-overlay-content">
+            <div class="voice-waveform" id="voiceWaveform">
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+            </div>
+            <p class="voice-status" id="voiceStatus">Listening...</p>
+            <p class="voice-transcript" id="voiceTranscript"></p>
+            <button class="voice-cancel" id="voiceCancelBtn">Cancel</button>
+        </div>
+    </div>
+
+    <!-- Settings Panel -->
+    <div class="settings-overlay" id="settingsOverlay">
+        <div class="settings-panel">
+            <div class="settings-header">
+                <h2>Settings</h2>
+                <button class="icon-btn" id="closeSettingsBtn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+            </div>
+            <div class="settings-body">
+                <div class="setting-group">
+                    <h3>AI Engine</h3>
+                    <label class="setting-row">
+                        <span>Mode</span>
+                        <select id="engineSelect">
+                            <option value="webllm">Offline (WebLLM)</option>
+                            <option value="gemini">Online (Gemini Free)</option>
+                            <option value="hybrid" selected>Hybrid (Auto)</option>
+                        </select>
+                    </label>
+                    <label class="setting-row">
+                        <span>Gemini API Key</span>
+                        <input type="password" id="apiKeyInput" placeholder="Optional — for online mode">
+                    </label>
+                    <label class="setting-row">
+                        <span>Model Status</span>
+                        <span class="model-status-badge" id="modelStatusBadge">Not loaded</span>
+                    </label>
+                </div>
+                <div class="setting-group">
+                    <h3>Voice</h3>
+                    <label class="setting-row">
+                        <span>Voice Output</span>
+                        <input type="checkbox" id="voiceOutputToggle" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <label class="setting-row">
+                        <span>Speed</span>
+                        <input type="range" id="voiceSpeedRange" min="0.5" max="2" step="0.1" value="1">
+                        <span class="range-val" id="voiceSpeedVal">1.0x</span>
+                    </label>
+                    <label class="setting-row">
+                        <span>Voice</span>
+                        <select id="voiceSelect"></select>
+                    </label>
+                </div>
+                <div class="setting-group">
+                    <h3>Appearance</h3>
+                    <label class="setting-row">
+                        <span>Accent Color</span>
+                        <div class="color-options" id="accentColorOptions">
+                            <button class="color-dot active" data-color="cyan" style="--c:#00f0ff"></button>
+                            <button class="color-dot" data-color="violet" style="--c:#a855f7"></button>
+                            <button class="color-dot" data-color="emerald" style="--c:#10b981"></button>
+                            <button class="color-dot" data-color="rose" style="--c:#f43f5e"></button>
+                            <button class="color-dot" data-color="amber" style="--c:#f59e0b"></button>
+                        </div>
+                    </label>
+                    <label class="setting-row">
+                        <span>Particles</span>
+                        <input type="checkbox" id="particlesToggle" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Browser Split Panel -->
+    <div class="browser-panel" id="browserPanel">
+        <div class="browser-toolbar">
+            <div class="browser-actions">
+                <button class="browser-action-btn" id="browserBackBtn" title="Back">←</button>
+                <button class="browser-action-btn" id="browserFwdBtn" title="Forward">→</button>
+                <button class="browser-action-btn" id="browserRefreshBtn" title="Refresh">⟳</button>
+            </div>
+            <div class="browser-url-bar">
+                <span class="browser-url-icon">🌐</span>
+                <input type="text" id="browserUrlInput" placeholder="Enter URL..." spellcheck="false">
+                <button class="browser-go-btn" id="browserGoBtn">Go</button>
+            </div>
+            <div class="browser-actions">
+                <button class="browser-action-btn" id="browserReadBtn" title="Read page content">📖</button>
+                <button class="browser-action-btn" id="browserNewTabBtn" title="Open in new tab">↗</button>
+                <button class="browser-action-btn browser-close" id="browserCloseBtn" title="Close">✕</button>
+            </div>
+        </div>
+        <iframe id="browserFrame" sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+            referrerpolicy="no-referrer"></iframe>
+    </div>
+
+    <!-- System Stats -->
+    <div class="system-stats" id="systemStats">
+        <div class="stat">
+            <span class="stat-label">ENGINE</span>
+            <span class="stat-value" id="engineVal">INIT</span>
+        </div>
+        <div class="stat">
+            <span class="stat-label">MESSAGES</span>
+            <span class="stat-value" id="msgCountVal">0</span>
+        </div>
+        <div class="stat">
+            <span class="stat-label">MODE</span>
+            <span class="stat-value" id="currentModeVal">CHAT</span>
+        </div>
+        <div class="stat">
+            <span class="stat-label">SERVER</span>
+            <span class="stat-value" id="serverVal">--</span>
+        </div>
+    </div>
+
+    <script type="module" src="app.js"></script>
+</body>
+
+</html>
