@@ -90,7 +90,7 @@
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/scp-gen.git
+git clone https://github.com/koushal124590/gen-ai-assistant/scp-gen.git
 
 # Navigate to the project
 cd scp-gen
@@ -172,8 +172,8 @@ This project is proprietary software developed by **SCP**.
 
   <br>
 
-  [![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=github&logoColor=white)](https://github.com/your-org)
-  [![Website](https://img.shields.io/badge/Website-4285F4?style=flat-square&logo=googlechrome&logoColor=white)](https://your-website.com)
-  [![Discord](https://img.shields.io/badge/Discord-5865F2?style=flat-square&logo=discord&logoColor=white)](https://discord.gg/your-server)
+  [![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=github&logoColor=white)](https://github.com/koushal124590/gen-ai-assistant)
+  [![Website](https://img.shields.io/badge/Website-4285F4?style=flat-square&logo=googlechrome&logoColor=white)](https://github.com/koushal124590/gen-ai-assistant)
+  [![Discord](https://img.shields.io/badge/Discord-5865F2?style=flat-square&logo=discord&logoColor=white)](https://github.com/koushal124590/gen-ai-assistant)
 
 </div>
